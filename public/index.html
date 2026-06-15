@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opencode agent</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#f5f5f5; color:#222; height:100dvh; display:flex; flex-direction:column; }
+
+.header { background:#fff; padding:10px 16px; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+.header h1 { font-size:16px; font-weight:600; color:#4f46e5; }
+.header .info { font-size:12px; color:#999; }
+.header .actions { margin-left:auto; position:relative; }
+.header .actions button { background:#eee; border:1px solid #ddd; border-radius:4px; padding:3px 8px; font-size:12px; cursor:pointer; }
+
+.output { flex:1; overflow-y:auto; padding:16px; font-size:14px; line-height:1.6; }
+.output::-webkit-scrollbar { width:6px; }
+.output::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+
+.msg { margin-bottom:12px; }
+.msg .role { font-size:11px; color:#999; margin-bottom:2px; font-weight:600; }
+.msg.user .content { background:#4f46e5; color:#fff; padding:10px 14px; border-radius:10px; display:inline-block; max-width:90%; }
+.msg.assistant .content { background:#fff; border:1px solid #e0e0e0; padding:10px 14px; border-radius:10px; max-width:90%; white-space:pre-wrap; word-break:break-word; }
+.msg.tool { margin:6px 0; padding:6px 10px; background:#f0f4ff; border-left:3px solid #4f46e5; border-radius:4px; font-size:12px; color:#555; font-family:monospace; }
+.msg.tool .tool-name { color:#4f46e5; font-weight:600; }
+.msg.error { padding:8px 12px; background:#ffe0e0; color:#c0392b; border-radius:6px; font-size:13px; }
+.empty { text-align:center; color:#999; padding:40px; }
+
+.input-line { display:flex; padding:10px 16px; border-top:1px solid #ddd; background:#fff; gap:8px; align-items:flex-end; }
+.input-line textarea { flex:1; background:#f9f9f9; border:1px solid #ddd; border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; resize:none; outline:none; max-height:120px; }
+.input-line textarea:focus { border-color:#4f46e5; }
+.input-line button { background:#4f46e5; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; cursor:pointer; font-weight:600; }
+.input-line button:disabled { opacity:0.4; cursor:not-allowed; }
+
+.sidebar { position:fixed; right:0; top:0; bottom:0; width:260px; background:#fff; border-left:1px solid #ddd; transform:translateX(100%); transition:transform 0.2s; z-index:20; display:flex; flex-direction:column; }
+.sidebar.open { transform:translateX(0); }
+.sidebar-header { padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+.sidebar-header button { background:none; border:none; font-size:16px; cursor:pointer; color:#999; padding:0 4px; }
+.sidebar-tree { flex:1; overflow-y:auto; padding:4px 0; font-size:12px; font-family:monospace; }
+.sidebar-tree .item { padding:2px 12px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-tree .item:hover { background:#f0f4ff; }
+.sidebar-tree .item.dir { color:#4f46e5; }
+.sidebar-tree .item.file { color:#555; }
+.sidebar-tree .children { display:none; }
+.sidebar-tree .children.open { display:block; }
+
+.file-preview { border-top:1px solid #ddd; display:flex; flex-direction:column; max-height:50%; }
+.file-preview .preview-header { padding:6px 12px; display:flex; align-items:center; gap:6px; border-bottom:1px solid #eee; }
+.sidebar-toggle { position:fixed; right:0; top:50%; transform:translateY(-50%); background:#4f46e5; color:#fff; border:none; border-radius:6px 0 0 6px; padding:12px 6px; cursor:pointer; z-index:19; font-size:12px; writing-mode:vertical-lr; }
+
+.sessionMenu { display:none; position:absolute; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1); width:360px; max-height:400px; overflow-y:auto; z-index:10; }
+.sessionMenu .sess { padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; }
+.sessionMenu .sess:hover { background:#f8f8f8; }
+.sessionMenu .sess.active { background:#f0f4ff; }
+.sessionMenu .sess .del { color:#e74c3c; font-size:14px; cursor:pointer; padding:0 4px; }
+.sessionMenu .sess .title { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sessionMenu .sess .meta { font-size:11px; color:#999; }
+.sessionMenu .new-btn { padding:8px 12px; border-bottom:1px solid #eee; }
+.sessionMenu .new-btn button { background:#4f46e5; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:12px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle" onclick="toggleSidebar()">Files</button>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header"><span>Files</span><button onclick="toggleSidebar()">&times;</button></div>
+  <div class="sidebar-tree" id="sidebarTree"></div>
+  <div class="file-preview" id="filePreview" style="display:none">
+    <div class="preview-header">
+      <span id="previewPath" style="font-size:11px;color:#999;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"></span>
+      <button onclick="copyPreview()" style="background:#eee;border:1px solid #ddd;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer">copy</button>
+      <button onclick="closePreview()" style="background:none;border:none;font-size:14px;cursor:pointer;color:#999;padding:0 4px">&times;</button>
+    </div>
+    <pre id="previewContent" style="flex:1;overflow:auto;padding:8px 12px;font-size:12px;background:#f9f9f9;margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+  </div>
+</div>
+
+<div class="header">
+  <h1>opencode agent</h1>
+  <span class="info" id="info"></span>
+  <span class="info" id="pathInfo" style="margin-left:12px"></span>
+  <span class="info" id="ctxInfo" style="margin-left:8px"></span>
+  <div class="actions">
+    <button onclick="toggleSessions()">sessions</button>
+    <div class="sessionMenu" id="sessionMenu">
+      <div class="new-btn"><button onclick="newSession()">+ new</button></div>
+      <div id="sessionItems"></div>
+    </div>
+  </div>
+</div>
+
+<div class="output" id="output"><div class="empty">type a request to start</div></div>
+
+<div class="input-line">
+  <textarea id="input" rows="2" placeholder="ask opencode to do something..." onkeydown="handleKey(event)" oninput="updateSendButton()"></textarea>
+  <button id="sendBtn" onclick="send()">send</button>
+</div>
+
+<script>
+const out = document.getElementById("output");
+const inp = document.getElementById("input");
+const btn = document.getElementById("sendBtn");
+const info = document.getElementById("info");
+const pathInfo = document.getElementById("pathInfo");
+const ctxInfo = document.getElementById("ctxInfo");
+
+let sessionId = localStorage.getItem("oc_sid");
+let isStreaming = false;
+let currentDir = "";
+let lastInput = "";
+
+function updateSendButton() {
+  btn.disabled = isStreaming || !inp.value.trim();
+}
+
+function newSession() {
+  localStorage.removeItem("oc_sid");
+  sessionId = null; currentDir = "";
+  info.textContent = ""; pathInfo.textContent = ""; ctxInfo.textContent = "";
+  out.innerHTML = '<div class="empty">new session</div>';
+  document.getElementById("sessionMenu").style.display = "none";
+}
+
+async function toggleSessions() {
+  const m = document.getElementById("sessionMenu");
+  if (m.style.display === "block") { m.style.display = "none"; return; }
+  await loadSessionList();
+  m.style.display = "block";
+}
+
+async function loadSessionList() {
+  try {
+    const list = await (await fetch("/api/sessions")).json();
+    const el = document.getElementById("sessionItems");
+    el.innerHTML = list.map(s => {
+      const active = s.id === sessionId;
+      const dir = (s.directory||"").split("\\").slice(-2).join("/");
+      const t = new Date(s.updated).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+      return `<div class="sess ${active?'active':''}" onclick="switchSession('${s.id}')">
+        <div style="flex:1;min-width:0"><div class="title">${esc(s.title||"untitled")}</div><div class="meta">${dir} · ${t}</div></div>
+        <span class="del" onclick="event.stopPropagation();deleteSession('${s.id}')">&times;</span>
+      </div>`;
+    }).join("") || '<div style="padding:12px;color:#999;font-size:13px">no sessions</div>';
+  } catch {}
+}
+
+function switchSession(id) {
+  sessionId = id; localStorage.setItem("oc_sid", id);
+  info.textContent = "loading..."; out.innerHTML = "";
+  loadHistory(id);
+  document.getElementById("sessionMenu").style.display = "none";
+}
+
+async function deleteSession(id) {
+  await fetch("/api/session/"+id,{method:"DELETE"});
+  if (id === sessionId) newSession(); else loadSessionList();
+}
+
+function esc(s) { return s.replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+async function loadHistory(sid) {
+  try {
+    const data = await (await fetch("/api/session/"+sid)).json();
+    if (data.info?.title) info.textContent = data.info.title;
+    if (data.info?.directory) { currentDir = data.info.directory; pathInfo.textContent = currentDir.split("\\").slice(-2).join("/"); }
+    for (const msg of (data.messages||[])) {
+      if (!msg.parts) continue;
+      for (const p of msg.parts) {
+        if (p.synthetic) continue;
+        if (p.type==="text"&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        if (p.type==="tool"&&p.tool) addTool(p.tool, (p.state?.input?.command||p.state?.input?.filePath||"").slice(0,80));
+      }
+    }
+  } catch {}
+}
+
+function scrollBottom() { requestAnimationFrame(()=>{out.scrollTop=out.scrollHeight;}); }
+
+function cleanText(t) {
+  if (!t) return "";
+  return t.replace(/^\n\[current git branch[^\n]*\n?/, "");
+}
+
+function addMessage(role, text) {
+  const div = document.createElement("div"); div.className = "msg "+role;
+  const c = document.createElement("div"); c.className = "content";
+  c.textContent = cleanText(text); div.appendChild(c);
+  out.appendChild(div); scrollBottom();
+  return {div, content:c};
+}
+
+function addTool(name, input) {
+  const div = document.createElement("div"); div.className = "msg tool";
+  div.innerHTML = `<span class="tool-name">${name}</span>${input?`<br><span style="color:#999">${input}</span>`:""}`;
+  out.appendChild(div); scrollBottom(); return div;
+}
+
+async function send() {
+  if (isStreaming) return;
+  const text = inp.value.trim(); if (!text) return;
+  inp.value = ""; inp.style.height = "auto";
+  btn.disabled = true; isStreaming = true;
+
+  addMessage("user", text);
+  const {div:assistantDiv, content:contentDiv} = addMessage("assistant","");
+  let lastOutput = "";
+
+  try {
+    const resp = await fetch("/api/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,sessionId,directory:currentDir})});
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    while (true) {
+      const {done,value} = await reader.read(); if (done) break;
+      buf += dec.decode(value,{stream:true});
+      const lines = buf.split("\n"); buf = lines.pop()||"";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          console.log("SSE", evt.type, JSON.stringify(evt).slice(0, 200));
+          if (evt.type==="session") { sessionId=evt.id; localStorage.setItem("oc_sid",sessionId); info.textContent="New session"; }
+          if (evt.systemContext) { ctxInfo.textContent = `${evt.systemContext.used||0} / ${evt.systemContext.total||"128K"}`; }
+          if (evt.type==="text") { contentDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom(); }
+          if (evt.type==="tool_use"&&evt.part?.tool) {
+            const inp = (evt.part.state?.input?.command||evt.part.state?.input?.filePath||"").slice(0,80);
+            const td = addTool(evt.part.tool, inp);
+            out.insertBefore(td, assistantDiv);
+            if (evt.part.state?.output) lastOutput = evt.part.state.output.slice(0, 1000);
+          }
+        } catch(e) { console.error("SSE parse error", e, line.slice(0, 100)); }
+      }
+    }
+    if (!contentDiv.textContent && lastOutput) {
+      contentDiv.textContent = lastOutput;
+      scrollBottom();
+    }
+    if (!contentDiv.textContent.trim()) {
+      await fillFromExport(assistantDiv, contentDiv);
+    }
+  } catch (err) {
+    try { reader.cancel(); } catch {}
+    assistantDiv.className = "msg error";
+    contentDiv.textContent = "error: "+(err.message||"unknown");
+  } finally {
+    isStreaming = false; updateSendButton(); inp.focus();
+  }
+}
+
+async function fillFromExport(assistantDiv, contentDiv) {
+  if (!sessionId) return;
+  try {
+    const data = await (await fetch("/api/session/"+sessionId)).json();
+    const msgs = data.messages || [];
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const msg = msgs[i];
+      if (msg.info?.role === "user") break;
+      if (msg.info?.role !== "assistant") continue;
+      for (const p of (msg.parts || [])) {
+        if (p.synthetic) continue;
+        if (p.type === "text" && p.text) {
+          contentDiv.textContent = cleanText(p.text);
+          scrollBottom();
+          console.log("fallback: filled from export");
+          return;
+        }
+      }
+    }
+  } catch {}
+}
+
+function handleKey(e) { if (e.key==="Enter"&&!e.shiftKey) { e.preventDefault(); send(); } }
+
+function toggleSidebar() {
+  const sb = document.getElementById("sidebar");
+  sb.classList.toggle("open");
+  if (sb.classList.contains("open")) loadFileTree();
+}
+
+function renderTree(items, depth) {
+  return items.map(i=>{
+    const pad = depth*12;
+    if (i.type==="dir") return `<div class="item dir" style="padding-left:${pad+20}px">📁 ${i.name}</div><div class="children ${depth===0?'open':''}">${renderTree(i.children||[],depth+1)}</div>`;
+    return `<div class="item file" style="padding-left:${pad+20}px" data-path="${escAttr(i._path||'')}">📄 ${i.name}</div>`;
+  }).join("");
+}
+
+function escAttr(s) { return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+async function loadFileTree() {
+  if (!currentDir) return;
+  try {
+    const tree = await (await fetch("/api/files/"+encodeURIComponent(currentDir))).json();
+    document.getElementById("sidebarTree").innerHTML = renderTree(tree,0);
+    document.querySelectorAll("#sidebarTree .item.dir").forEach(el=>{
+      el.addEventListener("click",e=>{e.stopPropagation();const c=el.nextElementSibling;if(c)c.classList.toggle("open");});
+    });
+    document.querySelectorAll("#sidebarTree .item.file").forEach(el=>{
+      el.addEventListener("click",e=>{e.stopPropagation();openFile(el.getAttribute("data-path"));});
+    });
+  } catch {}
+}
+
+async function openFile(filePath) {
+  if (!filePath) return;
+  try {
+    const data = await (await fetch("/api/file/"+encodeURIComponent(filePath))).json();
+    document.getElementById("previewPath").textContent = data.path.split("\\").pop();
+    document.getElementById("previewContent").textContent = data.content;
+    document.getElementById("filePreview").style.display = "flex";
+  } catch {}
+}
+
+function closePreview() {
+  document.getElementById("filePreview").style.display = "none";
+}
+
+async function copyPreview() {
+  const text = document.getElementById("previewContent").textContent;
+  await navigator.clipboard.writeText(text);
+}
+
+if (sessionId) { loadHistory(sessionId); }
+</script>
+</body>
+</html>

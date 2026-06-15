@@ -8,6 +8,7 @@ const PORT = parseInt(process.env.PORT || "3458", 10);
 const MODEL = process.env.OP_MODEL || "deepseek/deepseek-v4-pro";
 const AGENT = process.env.OP_AGENT || "build";
 const WORKDIR = process.env.OP_WORKDIR || process.cwd();
+const ROOT = path.resolve(__dirname, "..");
 const OPENCODE = "C:\\nvm4w\\nodejs\\node_modules\\opencode-ai\\bin\\opencode.exe";
 
 const MIME = {
@@ -57,6 +58,7 @@ function runOpenCode(sessionId, message, directory) {
 
   const child = spawn(OPENCODE, args, {
     windowsHide: true,
+    cwd: ROOT,
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -191,6 +193,7 @@ const server = http.createServer(async (req, res) => {
     const sessionId = req.url.slice("/api/session/".length);
     const child = spawn(OPENCODE, ["export", sessionId], {
       windowsHide: true,
+      cwd: ROOT,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -219,6 +222,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/api/sessions") {
     const child = spawn(OPENCODE, ["session", "list", "--format", "json"], {
       windowsHide: true,
+      cwd: ROOT,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -240,6 +244,7 @@ const server = http.createServer(async (req, res) => {
     const sessionId = req.url.slice("/api/session/".length);
     const child = spawn(OPENCODE, ["session", "delete", sessionId], {
       windowsHide: true,
+      cwd: ROOT,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

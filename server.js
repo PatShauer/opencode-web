@@ -141,7 +141,6 @@ const server = http.createServer(async (req, res) => {
     }, 8000);
 
     function processChunk(chunk) {
-      if (closed) return;
       buf += chunk.toString();
       const lines = buf.split("\n");
       buf = lines.pop() || "";
@@ -164,13 +163,13 @@ const server = http.createServer(async (req, res) => {
 
     let doneCalled = false;
     const done = () => {
-      if (doneCalled || closed) return;
+      if (doneCalled) return;
       doneCalled = true;
       clearInterval(heartbeat);
       if (buf.trim()) processChunk("\n");
       clearTimeout(timeout);
-      res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-      res.end();
+      try { res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`); } catch {}
+      try { res.end(); } catch {}
     };
 
     child.stdout.on("end", done);

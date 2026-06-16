@@ -51,13 +51,21 @@ OP_WORKDIR=C:\Users\LukeC\.kimaki\projects\kimaki\opencode-web\Projects
 OP_AGENT=build
 ```
 
-## Known Issues
+## Known Issues & Research
 
-### Response sometimes doesn't render until page refresh
+### Tool/text rendering order in live stream vs. refresh
 
-**Symptom:** After sending a message, tool calls appear but the final text response never fills the reply box. The send button re-enables but no text is visible. Refreshing the page shows the complete response — the data was saved correctly, just not streamed to the UI.
+**Root cause:** `opencode run --format json` emits `tool_use` and `text` events in raw internal processing order — the LLM often batches all tool calls first, then produces text for multiple steps in one go. The final session export reorders them correctly, but **sessions created via `opencode run` do not include tool parts in the export** (only `step-start / reasoning / text / step-finish`). Export-based reordering is therefore not viable for WORKDIR sessions.
 
-**Workaround:** Refresh the page. All data is persisted in the opencode session on disk.
+**Why kimaki's Discord bot has correct ordering:** Kimaki uses `opencode serve` + the plugin SDK (`message.part.updated` events) which delivers pre-ordered parts. It also buffers all tool calls during live streaming and only flushes them in correct order at session idle.
+
+**Our approach:** Render events in stream arrival order with batching — consecutive tool calls stay grouped, text blocks are created lazily. The live view may show tools before their corresponding text during streaming, but no information is lost. Refreshing the page (via `loadHistory`) renders in correct export order.
+
+### Proxy disconnect during long tool chains
+
+**Symptom:** Send button stays gray indefinitely; no final text appears.
+
+**Root cause:** With corporate SSL MITM proxies, the upstream connection to the server may disconnect before opencode finishes. The server's `req.on("close")` handler set `closed = true`, which caused `done()` to return early without sending the final SSE event. **Fixed** by removing the `closed` guard from `done()` and `processChunk()`.
 
 ### Cold start latency per message
 

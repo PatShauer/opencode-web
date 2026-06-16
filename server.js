@@ -229,7 +229,7 @@ const server = http.createServer(async (req, res) => {
     if (WORKDIR && WORKDIR !== ROOT) dirs.push(WORKDIR);
 
     const queries = dirs.map((cwd) => new Promise((resolve) => {
-      const child = spawn(OPENCODE, ["session", "list", "--format", "json"], {
+      const child = spawn(OPENCODE, ["session", "list", "--format", "json", "--pure"], {
         windowsHide: true,
         cwd,
         stdio: ["ignore", "pipe", "pipe"],

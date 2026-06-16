@@ -138,7 +138,7 @@ const server = http.createServer(async (req, res) => {
 
     const heartbeat = setInterval(() => {
       if (!closed) res.write(": hb\n\n");
-    }, 12000);
+    }, 8000);
 
     function processChunk(chunk) {
       if (closed) return;

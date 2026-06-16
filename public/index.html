@@ -138,10 +138,11 @@ async function loadSessionList() {
     const el = document.getElementById("sessionItems");
     el.innerHTML = list.map(s => {
       const active = s.id === sessionId;
+      const title = (s.title||"untitled").startsWith("New session") ? "New session" : s.title;
       const dir = (s.directory||"").split("\\").slice(-2).join("/");
       const t = new Date(s.updated).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
       return `<div class="sess ${active?'active':''}" onclick="switchSession('${s.id}')">
-        <div style="flex:1;min-width:0"><div class="title">${esc(s.title||"untitled")}</div><div class="meta">${dir} · ${t}</div></div>
+        <div style="flex:1;min-width:0"><div class="title">${esc(title)}</div><div class="meta">${dir} · ${t}</div></div>
         <span class="del" onclick="event.stopPropagation();deleteSession('${s.id}')">&times;</span>
       </div>`;
     }).join("") || '<div style="padding:12px;color:#999;font-size:13px">no sessions</div>';

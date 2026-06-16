@@ -82,7 +82,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
 <div class="header">
   <h1>deepseek agent</h1>
-  <span class="info" id="info"></span>
+  <span class="info" id="info" onclick="renameCurrentSession()" title="click to rename"></span>
   <span class="info" id="pathInfo" style="margin-left:12px"></span>
   <span class="info" id="ctxInfo" style="margin-left:8px"></span>
   <div class="actions">
@@ -143,7 +143,7 @@ async function loadSessionList() {
       const t = new Date(s.updated).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
       return `<div class="sess ${active?'active':''}" onclick="switchSession('${s.id}')">
         <div style="flex:1;min-width:0">
-          <div class="title" oncontextmenu="event.preventDefault();renameSession('${s.id}','${esc(title)}')" title="right-click to rename">${esc(title)}</div>
+          <div class="title">${esc(title)}</div>
           <div class="meta">${dir} · ${t}</div>
         </div>
         <span class="del" onclick="event.stopPropagation();deleteSession('${s.id}')">&times;</span>
@@ -159,11 +159,12 @@ function switchSession(id) {
   document.getElementById("sessionMenu").style.display = "none";
 }
 
-async function renameSession(id, currentTitle) {
-  const t = prompt("Rename session:", currentTitle.replace(/^"|"$/g, ""));
-  if (t && t !== currentTitle) {
-    await fetch(`/api/session/${id}/title`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
-    loadSessionList();
+async function renameCurrentSession() {
+  if (!sessionId) return;
+  const t = prompt("Rename session:", info.textContent || "");
+  if (t && t !== info.textContent) {
+    await fetch(`/api/session/${sessionId}/title`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
+    info.textContent = t;
   }
 }
 

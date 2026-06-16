@@ -14,6 +14,8 @@ const OPENCODE = "C:\\nvm4w\\nodejs\\node_modules\\opencode-ai\\bin\\opencode.ex
 const TITLES_FILE = path.join(__dirname, "titles.json");
 let sessionTitles = {};
 try { sessionTitles = JSON.parse(fs.readFileSync(TITLES_FILE, "utf8")); } catch {}
+
+const MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",

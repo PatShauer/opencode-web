@@ -224,7 +224,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/api/sessions") {
+  if (req.method === "GET" && req.url.split("?")[0] === "/api/sessions") {
     const dirs = [ROOT];
     if (WORKDIR && WORKDIR !== ROOT) dirs.push(WORKDIR);
 

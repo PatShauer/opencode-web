@@ -132,7 +132,7 @@ async function toggleSessions() {
 
 async function loadSessionList() {
   try {
-    const list = await (await fetch("/api/sessions")).json();
+    const list = await (await fetch("/api/sessions?_="+Date.now())).json();
     const el = document.getElementById("sessionItems");
     el.innerHTML = list.map(s => {
       const active = s.id === sessionId;
@@ -143,7 +143,7 @@ async function loadSessionList() {
         <span class="del" onclick="event.stopPropagation();deleteSession('${s.id}')">&times;</span>
       </div>`;
     }).join("") || '<div style="padding:12px;color:#999;font-size:13px">no sessions</div>';
-  } catch {}
+  } catch(e) { console.error("sessions load error", e); }
 }
 
 function switchSession(id) {

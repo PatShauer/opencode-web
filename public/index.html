@@ -242,7 +242,6 @@ async function send() {
             }
             lastTextDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom();
           }
-          if (evt.type==="step_finish") { hasToolSinceText = true; }
           if (evt.type==="tool_use"&&evt.part?.tool) {
             const inp = (evt.part.state?.input?.command||evt.part.state?.input?.filePath||"").slice(0,80);
             const td = addTool(evt.part.tool, inp);

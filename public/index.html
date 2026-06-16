@@ -182,9 +182,11 @@ async function loadHistory(sid) {
     if (data.info?.directory) { currentDir = data.info.directory; pathInfo.textContent = currentDir.split("\\").slice(-2).join("/"); }
     for (const msg of (data.messages||[])) {
       if (!msg.parts) continue;
+      const hasText = msg.parts.some(p => p.type==="text"&&p.text&&!p.synthetic);
       for (const p of msg.parts) {
         if (p.synthetic) continue;
         if (p.type==="text"&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        else if (!hasText && p.type==="reasoning"&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
         if (p.type==="tool"&&p.tool) addTool(p.tool, toolInput(p));
       }
     }

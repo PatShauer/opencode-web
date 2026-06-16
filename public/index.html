@@ -208,13 +208,10 @@ async function send() {
   addMessage("user", text);
   const assistantDiv = document.createElement("div");
   assistantDiv.className = "msg assistant";
-  const contentDiv = document.createElement("div");
-  contentDiv.className = "content";
-  assistantDiv.appendChild(contentDiv);
   out.appendChild(assistantDiv);
   scrollBottom();
 
-  let lastTextDiv = contentDiv;
+  let lastTextDiv = null;
   let lastOutput = "";
   let hasToolSinceText = false;
 
@@ -234,7 +231,7 @@ async function send() {
           if (evt.type==="session") { sessionId=evt.id; localStorage.setItem("oc_sid",sessionId); info.textContent="New session"; }
           if (evt.systemContext) { ctxInfo.textContent = `${evt.systemContext.used||0} / ${evt.systemContext.total||"128K"}`; }
           if (evt.type==="text") {
-            if (hasToolSinceText) {
+            if (!lastTextDiv || hasToolSinceText) {
               lastTextDiv = document.createElement("div");
               lastTextDiv.className = "content";
               assistantDiv.appendChild(lastTextDiv);
@@ -252,23 +249,24 @@ async function send() {
         } catch(e) { console.error("SSE parse error", e, line.slice(0, 100)); }
       }
     }
-    if (!contentDiv.textContent && lastOutput) {
-      contentDiv.textContent = lastOutput;
+    if (lastTextDiv && !lastTextDiv.textContent && lastOutput) {
+      lastTextDiv.textContent = lastOutput;
       scrollBottom();
     }
     if (![...assistantDiv.querySelectorAll(".content")].some(d=>d.textContent.trim())) {
-      await fillFromExport(assistantDiv, contentDiv);
+      await fillFromExport(assistantDiv);
     }
   } catch (err) {
     try { reader.cancel(); } catch {}
     assistantDiv.className = "msg error";
-    contentDiv.textContent = "error: "+(err.message||"unknown");
+    if (lastTextDiv) lastTextDiv.textContent = "error: "+(err.message||"unknown");
+    else { const e = document.createElement("div"); e.className = "content"; e.textContent = "error: "+(err.message||"unknown"); assistantDiv.appendChild(e); }
   } finally {
     isStreaming = false; updateSendButton(); inp.focus();
   }
 }
 
-async function fillFromExport(assistantDiv, contentDiv) {
+async function fillFromExport(assistantDiv) {
   if (!sessionId) return;
   try {
     const data = await (await fetch("/api/session/"+sessionId)).json();

@@ -211,8 +211,15 @@ const server = http.createServer(async (req, res) => {
 
     child.on("close", (code) => {
       if (code === 0) {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(out);
+        try {
+          const data = JSON.parse(out);
+          if (sessionTitles[sessionId]) data.info.title = sessionTitles[sessionId];
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(data));
+        } catch {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(out);
+        }
       } else {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify([]));

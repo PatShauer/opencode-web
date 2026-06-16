@@ -136,6 +136,10 @@ const server = http.createServer(async (req, res) => {
     let buf = "";
     let sessionEmitted = null;
 
+    const heartbeat = setInterval(() => {
+      if (!closed) res.write(": hb\n\n");
+    }, 12000);
+
     function processChunk(chunk) {
       if (closed) return;
       buf += chunk.toString();
@@ -146,7 +150,6 @@ const server = http.createServer(async (req, res) => {
         if (!line.trim()) continue;
         try {
           const evt = JSON.parse(line);
-          console.error("[sse]", evt.type, line.slice(0, 120));
           res.write(`data: ${JSON.stringify(evt)}\n\n`);
 
           if (!sessionEmitted && !sessionId && evt.sessionID && evt.type !== "session") {
@@ -163,6 +166,7 @@ const server = http.createServer(async (req, res) => {
     const done = () => {
       if (doneCalled || closed) return;
       doneCalled = true;
+      clearInterval(heartbeat);
       if (buf.trim()) processChunk("\n");
       clearTimeout(timeout);
       res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
@@ -180,6 +184,7 @@ const server = http.createServer(async (req, res) => {
     }, 180000);
 
     child.on("error", (err) => {
+      clearInterval(heartbeat);
       if (!closed) {
         res.write(`data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`);
         res.end();

@@ -220,7 +220,6 @@ async function send() {
         if (!line.startsWith("data: ")) continue;
         try {
           const evt = JSON.parse(line.slice(6));
-          console.log("SSE", evt.type, JSON.stringify(evt).slice(0, 200));
           if (evt.type==="session") { sessionId=evt.id; localStorage.setItem("oc_sid",sessionId); info.textContent="New session"; }
           if (evt.systemContext) { ctxInfo.textContent = `${evt.systemContext.used||0} / ${evt.systemContext.total||"128K"}`; }
           if (evt.type==="text") { contentDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom(); }

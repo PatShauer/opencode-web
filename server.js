@@ -23,7 +23,7 @@ function serveStatic(req, res) {
   const ext = path.extname(fp);
   try {
     if (!fs.existsSync(fp) || fs.statSync(fp).isDirectory()) return false;
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": "no-cache, no-store, must-revalidate" });
+    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": "private, no-cache, no-store, must-revalidate", "CDN-Cache-Control": "no-store" });
     res.end(fs.readFileSync(fp));
     return true;
   } catch { return false; }

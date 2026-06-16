@@ -268,5 +268,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.error(`opencode-web http://localhost:${PORT}`);
+  console.log(`opencode-web http://localhost:${PORT}`);
 });

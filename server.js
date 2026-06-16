@@ -225,34 +225,21 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && req.url.split("?")[0] === "/api/sessions") {
-    const dirs = [ROOT];
-    if (WORKDIR && WORKDIR !== ROOT) dirs.push(WORKDIR);
-
-    const queries = dirs.map((cwd) => new Promise((resolve) => {
-      const child = spawn(OPENCODE, ["session", "list", "--format", "json", "--pure"], {
-        windowsHide: true,
-        cwd,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      let out = "";
-      child.stdout.on("data", (d) => { out += d.toString(); });
-      child.on("close", () => { try { resolve(JSON.parse(out)); } catch { resolve([]); } });
-      child.on("error", () => resolve([]));
-    }));
-
-    const results = await Promise.all(queries);
-    const seen = new Set();
-    const merged = [];
-    for (const list of results) {
-      for (const s of (list || [])) {
-        if (!seen.has(s.id)) {
-          seen.add(s.id);
-          merged.push(s);
-        }
-      }
-    }
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(merged));
+    const child = spawn(OPENCODE, ["session", "list", "--format", "json", "--pure"], {
+      windowsHide: true,
+      cwd: WORKDIR,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    child.stdout.on("data", (d) => { out += d.toString(); });
+    child.on("close", () => {
+      try { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify(JSON.parse(out))); }
+      catch { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify([])); }
+    });
+    child.on("error", () => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify([]));
+    });
     return;
   }
 

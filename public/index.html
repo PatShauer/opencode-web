@@ -136,6 +136,7 @@ async function toggleSessions() {
 async function loadSessionList() {
   try {
     const list = await (await fetch("/api/sessions?_="+Date.now())).json();
+    console.log("sessions loaded:", list.length, list[0]?.title);
     const el = document.getElementById("sessionItems");
     el.innerHTML = list.map(s => {
       const active = s.id === sessionId;

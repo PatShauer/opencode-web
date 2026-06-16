@@ -257,7 +257,9 @@ async function send() {
       lastTextDiv.textContent = lastOutput;
       scrollBottom();
     }
-    await fillFromExport(assistantDiv);
+    if (![...assistantDiv.querySelectorAll(".content")].some(d=>d.textContent.trim())) {
+      await fillFromExport(assistantDiv);
+    }
   } catch (err) {
     try { reader.cancel(); } catch {}
     assistantDiv.className = "msg error";
@@ -277,26 +279,17 @@ async function fillFromExport(assistantDiv) {
       const msg = msgs[i];
       if (msg.info?.role === "user") break;
       if (msg.info?.role !== "assistant") continue;
-      assistantDiv.innerHTML = "";
-      let cur = document.createElement("div");
-      cur.className = "content";
-      assistantDiv.appendChild(cur);
       for (const p of (msg.parts || [])) {
         if (p.synthetic) continue;
         if (p.type === "text" && p.text) {
-          cur.textContent += cleanText(p.text);
-        }
-        if (p.type === "tool" && p.tool) {
-          const inp = (p.state?.input?.command||p.state?.input?.filePath||"").slice(0,80);
-          const td = addTool(p.tool, inp);
-          assistantDiv.appendChild(td);
-          cur = document.createElement("div");
-          cur.className = "content";
-          assistantDiv.appendChild(cur);
+          const el = document.createElement("div");
+          el.className = "content";
+          el.textContent = cleanText(p.text);
+          assistantDiv.appendChild(el);
+          scrollBottom();
+          return;
         }
       }
-      scrollBottom();
-      return;
     }
   } catch {}
 }

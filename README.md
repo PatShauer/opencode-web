@@ -28,9 +28,9 @@ opencode.exe (spawned per request, --format json NDJSON output)
 
 ## Key Design Decisions
 
-### Multi-project session listing
+### Project-scoped session listing
 
-`/api/sessions` queries `opencode session list` from **both** the kimaki root project and the `Projects/` sub-project, then merges and deduplicates by session ID. This is necessary because `opencode session list` is project-scoped — sessions created with `--dir Projects/` get a different `projectID` from sessions created at the kimaki root.
+`/api/sessions` returns sessions from the `Projects/` directory only, using `--pure` flag to bypass the kimaki plugin's project scoping. The kimaki plugin intercepts `session list` and restricts it to the kimaki project; `--pure` disables the plugin so the correct sessions are returned.
 
 ### SSE heartbeat
 

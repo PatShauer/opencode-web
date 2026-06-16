@@ -142,7 +142,10 @@ async function loadSessionList() {
       const dir = (s.directory||"").split("\\").slice(-2).join("/");
       const t = new Date(s.updated).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
       return `<div class="sess ${active?'active':''}" onclick="switchSession('${s.id}')">
-        <div style="flex:1;min-width:0"><div class="title">${esc(title)}</div><div class="meta">${dir} · ${t}</div></div>
+        <div style="flex:1;min-width:0">
+          <div class="title" oncontextmenu="event.preventDefault();renameSession('${s.id}','${esc(title)}')" title="right-click to rename">${esc(title)}</div>
+          <div class="meta">${dir} · ${t}</div>
+        </div>
         <span class="del" onclick="event.stopPropagation();deleteSession('${s.id}')">&times;</span>
       </div>`;
     }).join("") || '<div style="padding:12px;color:#999;font-size:13px">no sessions</div>';
@@ -154,6 +157,14 @@ function switchSession(id) {
   info.textContent = "loading..."; out.innerHTML = "";
   loadHistory(id);
   document.getElementById("sessionMenu").style.display = "none";
+}
+
+async function renameSession(id, currentTitle) {
+  const t = prompt("Rename session:", currentTitle.replace(/^"|"$/g, ""));
+  if (t && t !== currentTitle) {
+    await fetch(`/api/session/${id}/title`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
+    loadSessionList();
+  }
 }
 
 async function deleteSession(id) {

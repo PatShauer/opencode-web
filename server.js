@@ -11,7 +11,9 @@ const WORKDIR = process.env.OP_WORKDIR || process.cwd();
 const ROOT = path.resolve(__dirname, "..");
 const OPENCODE = "C:\\nvm4w\\nodejs\\node_modules\\opencode-ai\\bin\\opencode.exe";
 
-const MIME = {
+const TITLES_FILE = path.join(__dirname, "titles.json");
+let sessionTitles = {};
+try { sessionTitles = JSON.parse(fs.readFileSync(TITLES_FILE, "utf8")); } catch {}
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -232,7 +234,14 @@ const server = http.createServer(async (req, res) => {
     let out = "";
     child.stdout.on("data", (d) => { out += d.toString(); });
     child.on("close", () => {
-      try { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify(JSON.parse(out))); }
+      try {
+        const list = JSON.parse(out);
+        for (const s of list) {
+          if (sessionTitles[s.id]) s.title = sessionTitles[s.id];
+        }
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(list));
+      }
       catch { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify([])); }
     });
     child.on("error", () => {
@@ -242,8 +251,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "PATCH" && req.url.startsWith("/api/session/") && req.url.endsWith("/title")) {
+    const sessionId = req.url.slice("/api/session/".length, -"/title".length);
+    const body = await readBody(req);
+    if (body?.title) {
+      sessionTitles[sessionId] = body.title;
+      try { fs.writeFileSync(TITLES_FILE, JSON.stringify(sessionTitles)); } catch {}
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    } else {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "title required" }));
+    }
+    return;
+  }
+
   if (req.method === "DELETE" && req.url.startsWith("/api/session/")) {
     const sessionId = req.url.slice("/api/session/".length);
+    if (sessionId.includes("/")) { res.writeHead(404); res.end("not found"); return; }
     const child = spawn(OPENCODE, ["session", "delete", sessionId], {
       windowsHide: true,
       cwd: ROOT,

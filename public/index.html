@@ -26,6 +26,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .msg.user .content { background:#4f46e5; color:#fff; padding:10px 14px; border-radius:10px; display:inline-block; max-width:90%; }
 .msg.assistant .content { background:#fff; border:1px solid #e0e0e0; padding:10px 14px; border-radius:10px; max-width:90%; white-space:pre-wrap; word-break:break-word; }
 .msg.tool { margin:6px 0; padding:6px 10px; background:#f0f4ff; border-left:3px solid #4f46e5; border-radius:4px; font-size:12px; color:#555; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msg.reasoning { display:none; padding:6px 10px; background:#fefce8; border-left:3px solid #eab308; border-radius:4px; font-size:12px; color:#92400e; margin:6px 0; white-space:pre-wrap; }
+.msg.reasoning.show { display:block; }
 .msg.tool .tool-name { color:#4f46e5; font-weight:600; }
 .msg.error { padding:8px 12px; background:#ffe0e0; color:#c0392b; border-radius:6px; font-size:13px; }
 .empty { text-align:center; color:#999; padding:40px; }
@@ -86,6 +88,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <span class="info" id="pathInfo" style="margin-left:12px"></span>
   <span class="info" id="ctxInfo" style="margin-left:8px"></span>
   <div class="actions">
+    <button onclick="toggleReasoning()" title="show/hide reasoning">&#x1F9E0;</button>
     <button onclick="toggleSessions()">sessions</button>
     <div class="sessionMenu" id="sessionMenu">
       <div class="new-btn"><button onclick="newSession()">+ new</button></div>
@@ -184,7 +187,8 @@ async function loadHistory(sid) {
       if (!msg.parts) continue;
       for (const p of msg.parts) {
         if (p.synthetic) continue;
-        if ((p.type==="text"||p.type==="reasoning")&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        if ((p.type==="text")&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        if (p.type==="reasoning"&&p.text) addReasoning(p.text);
         if (p.type==="tool"&&p.tool) addTool(p.tool, toolInput(p));
       }
     }
@@ -209,6 +213,15 @@ function addMessage(role, text) {
 function toolInput(p) {
   const inp = p.state?.input || p.input || {};
   return (inp.command||inp.filePath||inp.url||inp.pattern||inp.prompt||inp.description||"") .slice(0, 80);
+}
+
+function addReasoning(text) {
+  const div = document.createElement("div"); div.className = "msg reasoning";
+  div.textContent = text; out.appendChild(div); scrollBottom();
+}
+
+function toggleReasoning() {
+  document.querySelectorAll(".msg.reasoning").forEach(d=>d.classList.toggle("show"));
 }
 
 function addTool(name, input) {

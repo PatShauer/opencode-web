@@ -26,6 +26,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .msg.user .content { background:#4f46e5; color:#fff; padding:10px 14px; border-radius:10px; display:inline-block; max-width:90%; }
 .msg.assistant .content { background:#fff; border:1px solid #e0e0e0; padding:10px 14px; border-radius:10px; max-width:90%; white-space:pre-wrap; word-break:break-word; }
 .msg.tool { margin:6px 0; padding:6px 10px; background:#f0f4ff; border-left:3px solid #4f46e5; border-radius:4px; font-size:12px; color:#555; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msg.reasoning { display:none; }
+.msg.reasoning.show { display:block; }
+.msg.reasoning .content { font-style:italic; color:#888; }
 .msg.tool .tool-name { color:#4f46e5; font-weight:600; }
 .msg.error { padding:8px 12px; background:#ffe0e0; color:#c0392b; border-radius:6px; font-size:13px; }
 .empty { text-align:center; color:#999; padding:40px; }
@@ -86,6 +89,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <span class="info" id="pathInfo" style="margin-left:12px"></span>
   <span class="info" id="ctxInfo" style="margin-left:8px"></span>
   <div class="actions">
+    <button onclick="toggleReasoning()" style="font-size:12px" title="toggle reasoning">reasoning</button>
     <button onclick="toggleSessions()">sessions</button>
     <div class="sessionMenu" id="sessionMenu">
       <div class="new-btn"><button onclick="newSession()">+ new</button></div>
@@ -174,6 +178,9 @@ async function deleteSession(id) {
 }
 
 function esc(s) { return s.replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function toggleReasoning() {
+  document.querySelectorAll(".msg.reasoning").forEach(d=>d.classList.toggle("show"));
+}
 
 async function loadHistory(sid) {
   try {
@@ -184,7 +191,7 @@ async function loadHistory(sid) {
       if (!msg.parts) continue;
       for (const p of msg.parts) {
         if (p.synthetic) continue;
-        if ((p.type==="text"||p.type==="reasoning")&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        if ((p.type==="text"||p.type==="reasoning")&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text, p.type==="reasoning");
         if (p.type==="tool"&&p.tool) addTool(p.tool, toolInput(p));
       }
     }
@@ -198,8 +205,8 @@ function cleanText(t) {
   return t.replace(/^\n\[current git branch[^\n]*\n?/, "");
 }
 
-function addMessage(role, text) {
-  const div = document.createElement("div"); div.className = "msg "+role;
+function addMessage(role, text, isReasoning) {
+  const div = document.createElement("div"); div.className = "msg "+role + (isReasoning?" reasoning":"");
   const c = document.createElement("div"); c.className = "content";
   c.textContent = cleanText(text); div.appendChild(c);
   out.appendChild(div); scrollBottom();

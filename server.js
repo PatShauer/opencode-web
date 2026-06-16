@@ -50,7 +50,7 @@ function runOpenCode(sessionId, message, directory) {
     "--model", MODEL,
     "--agent", AGENT,
     "--format", "json",
-    "--yes",
+    "--dangerously-skip-permissions",
   ];
   if (sessionId) {
     args.push("--session", sessionId);

@@ -184,7 +184,7 @@ async function loadHistory(sid) {
       if (!msg.parts) continue;
       for (const p of msg.parts) {
         if (p.synthetic) continue;
-        if (p.type==="text"&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
+        if ((p.type==="text"||p.type==="reasoning")&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
         if (p.type==="tool"&&p.tool) addTool(p.tool, toolInput(p));
       }
     }
@@ -299,7 +299,7 @@ async function fillFromExport(assistantDiv) {
       if (msg.info?.role !== "assistant") continue;
       for (const p of (msg.parts || [])) {
         if (p.synthetic) continue;
-        if (p.type === "text" && p.text) {
+        if ((p.type === "text" || p.type === "reasoning") && p.text) {
           const el = document.createElement("div");
           el.className = "content";
           el.textContent = cleanText(p.text);

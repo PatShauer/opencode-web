@@ -216,6 +216,7 @@ async function send() {
 
   let lastTextDiv = contentDiv;
   let lastOutput = "";
+  let hasToolSinceText = false;
 
   try {
     const resp = await fetch("/api/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,sessionId,directory:currentDir})});
@@ -232,14 +233,20 @@ async function send() {
           const evt = JSON.parse(line.slice(6));
           if (evt.type==="session") { sessionId=evt.id; localStorage.setItem("oc_sid",sessionId); info.textContent="New session"; }
           if (evt.systemContext) { ctxInfo.textContent = `${evt.systemContext.used||0} / ${evt.systemContext.total||"128K"}`; }
-          if (evt.type==="text") { lastTextDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom(); }
+          if (evt.type==="text") {
+            if (hasToolSinceText) {
+              lastTextDiv = document.createElement("div");
+              lastTextDiv.className = "content";
+              assistantDiv.appendChild(lastTextDiv);
+              hasToolSinceText = false;
+            }
+            lastTextDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom();
+          }
           if (evt.type==="tool_use"&&evt.part?.tool) {
             const inp = (evt.part.state?.input?.command||evt.part.state?.input?.filePath||"").slice(0,80);
             const td = addTool(evt.part.tool, inp);
             assistantDiv.appendChild(td);
-            lastTextDiv = document.createElement("div");
-            lastTextDiv.className = "content";
-            assistantDiv.appendChild(lastTextDiv);
+            hasToolSinceText = true;
             if (evt.part.state?.output) lastOutput = evt.part.state.output.slice(0, 1000);
           }
         } catch(e) { console.error("SSE parse error", e, line.slice(0, 100)); }

@@ -195,7 +195,7 @@ function addMessage(role, text) {
 
 function addTool(name, input) {
   const div = document.createElement("div"); div.className = "msg tool";
-  div.innerHTML = `<span class="tool-name">${name}</span>${input?`<br><span style="color:#999">${input}</span>`:""}`;
+  div.innerHTML = `<span class="tool-name">${name}</span>${input?`: <span style="color:#999">${input}</span>`:""}`;
   out.appendChild(div); scrollBottom(); return div;
 }
 

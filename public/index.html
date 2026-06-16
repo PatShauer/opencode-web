@@ -185,7 +185,7 @@ async function loadHistory(sid) {
       for (const p of msg.parts) {
         if (p.synthetic) continue;
         if (p.type==="text"&&p.text) addMessage(msg.info?.role==="user"?"user":"assistant",p.text);
-        if (p.type==="tool"&&p.tool) addTool(p.tool, (p.state?.input?.command||p.state?.input?.filePath||"").slice(0,80));
+        if (p.type==="tool"&&p.tool) addTool(p.tool, toolInput(p));
       }
     }
   } catch {}
@@ -204,6 +204,11 @@ function addMessage(role, text) {
   c.textContent = cleanText(text); div.appendChild(c);
   out.appendChild(div); scrollBottom();
   return {div, content:c};
+}
+
+function toolInput(p) {
+  const inp = p.state?.input || p.input || {};
+  return (inp.command||inp.filePath||inp.url||inp.pattern||inp.prompt||inp.description||"") .slice(0, 80);
 }
 
 function addTool(name, input) {
@@ -253,7 +258,7 @@ async function send() {
             lastTextDiv.textContent += cleanText(evt.part?.text||evt.text||""); scrollBottom();
           }
           if (evt.type==="tool_use"&&evt.part?.tool) {
-            const inp = (evt.part.state?.input?.command||evt.part.state?.input?.filePath||"").slice(0,80);
+            const inp = toolInput(evt.part);
             const td = addTool(evt.part.tool, inp);
             assistantDiv.appendChild(td);
             hasToolSinceText = true;

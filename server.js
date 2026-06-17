@@ -10,6 +10,7 @@ const AGENT = process.env.OP_AGENT || "build";
 const WORKDIR = process.env.OP_WORKDIR || process.cwd();
 const ROOT = path.resolve(__dirname, "..");
 const OPENCODE = "C:\\nvm4w\\nodejs\\node_modules\\opencode-ai\\bin\\opencode.exe";
+const TIMEOUT = parseInt(process.env.OP_TIMEOUT || "600000", 10);
 
 const TITLES_FILE = path.join(__dirname, "titles.json");
 let sessionTitles = {};
@@ -185,7 +186,7 @@ const server = http.createServer(async (req, res) => {
       console.error("[opencode] timeout, killing");
       child.kill();
       done();
-    }, 180000);
+    }, TIMEOUT);
 
     child.on("error", (err) => {
       clearInterval(heartbeat);

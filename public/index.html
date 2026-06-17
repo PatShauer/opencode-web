@@ -215,7 +215,12 @@ function addMessage(role, text, isReasoning) {
 
 function toolInput(p) {
   const inp = p.state?.input || p.input || {};
-  return (inp.command||inp.filePath||inp.url||inp.pattern||inp.prompt||inp.description||(inp.todos?inp.todos.map(t=>t.content).join("; "):"")||"") .slice(0, 80);
+  if (inp.todos) {
+    const total = inp.todos.length;
+    const done = inp.todos.filter(t=>t.status==="completed").length;
+    return `${total} tasks (${done} done)`;
+  }
+  return (inp.command||inp.filePath||inp.url||inp.pattern||inp.prompt||inp.description||"") .slice(0, 80);
 }
 
 function addTool(name, input) {
